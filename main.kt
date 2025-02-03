@@ -28,8 +28,8 @@ class ImageProcessor {
 
     // Stage 2
     private fun addBit(image: BufferedImage): BufferedImage {
-        for (x in 0 until image.height) {
-            for (y in 0 until image.width) {
+        for (x in 0 until image.width) {
+            for (y in 0 until image.height) {
                 val color = Color(image.getRGB(x, y))
                 val red = color.red or 1
                 val green = color.green or 1
@@ -46,9 +46,9 @@ class ImageProcessor {
     private fun addBitInBlue(image: BufferedImage, message: List<Int>): BufferedImage {
         var mIterator: Int = 0
 
-        for (x in 0 until image.height) {
-            for (y in 0 until image.width) {
-                if (mIterator == message.size - 1)
+        for (x in 0 until image.width) {
+            for (y in 0 until image.height) {
+                if (mIterator == message.size)
                     break
 
                 val color = Color(image.getRGB(x, y))
@@ -57,14 +57,14 @@ class ImageProcessor {
                 var blue = color.blue
 
                 if (message[mIterator] == 0)
-                    blue = color.blue and 0
+                    blue = color.blue and 254
                 else
                     blue = color.blue or 1
 
                 mIterator++
                 image.setRGB(x, y, Color(red, green, blue).rgb)
             }
-            if (mIterator == message.size - 1)
+            if (mIterator == message.size)
                 break
         }
         return image
@@ -78,7 +78,7 @@ class ImageProcessor {
     }
 
     private fun checkSize(image: BufferedImage, message: ByteArray): Boolean {
-        val messageBitLength = message.size * message.size
+        val messageBitLength = message.size * 8
         val availableSize = image.height * image.width
         return messageBitLength <= availableSize
     }
@@ -99,7 +99,7 @@ class ImageProcessor {
     }
 
     // Temporal and for testing reasons
-    private fun exportPixelsRGB(image:BufferedImage, exportPath: File) {
+    fun exportPixelsRGB(image:BufferedImage, exportPath: File) {
         for (x in 0 until image.width) {
             for (y in 0 until image.height) {
                 val color = Color(image.getRGB(x, y))
@@ -128,7 +128,7 @@ class ImageProcessor {
         if (inputImage == null) {
             println("Can't read input file!")
             return
-        }
+        } //Hyperskill steganography program.
 
         // Request message to encrypt
         println("Message to hide:")
@@ -151,8 +151,8 @@ class ImageProcessor {
 
     private fun readImageBlueBits(image: BufferedImage): String {
         val readedBits = StringBuilder()
-        for (x in 0 until image.height) {
-            for (y in 0 until image.width) {
+        for (x in 0 until image.width) {
+            for (y in 0 until image.height) {
                 val color = Color(image.getRGB(x, y))
                 val blue = color.blue and 1
                 readedBits.append(blue)
