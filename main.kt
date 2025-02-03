@@ -46,8 +46,8 @@ class ImageProcessor {
     private fun addBitInBlue(image: BufferedImage, message: List<Int>): BufferedImage {
         var mIterator: Int = 0
 
-        for (x in 0 until image.width) {
-            for (y in 0 until image.height) {
+        for (y in 0 until image.height) {
+            for (x in 0 until image.width) {
                 if (mIterator == message.size)
                     break
 
@@ -100,8 +100,8 @@ class ImageProcessor {
 
     // Temporal and for testing reasons
     fun exportPixelsRGB(image:BufferedImage, exportPath: File) {
-        for (x in 0 until image.width) {
-            for (y in 0 until image.height) {
+        for (y in 0 until image.height) {
+            for (x in 0 until image.width) {
                 val color = Color(image.getRGB(x, y))
 
                 val red = color.red
@@ -146,13 +146,13 @@ class ImageProcessor {
         val encryptedImg = addBitInBlue(inputImage, binaryMessage)
 
         saveImage(encryptedImg, File(outputLine))
-        println("Message saved in $inputLine image.")
+        println("Message saved in $outputLine image.")
     }
 
     private fun readImageBlueBits(image: BufferedImage): String {
         val readedBits = StringBuilder()
-        for (x in 0 until image.width) {
-            for (y in 0 until image.height) {
+        for (y in 0 until image.height) {
+            for (x in 0 until image.width) {
                 val color = Color(image.getRGB(x, y))
                 val blue = color.blue and 1
                 readedBits.append(blue)
