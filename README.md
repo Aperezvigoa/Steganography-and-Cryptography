@@ -45,13 +45,6 @@ This project implements image steganography, a technique for hiding secret messa
 * **Security:** The XOR cipher used is a relatively simple form of encryption.  For more robust security, consider using stronger encryption algorithms.
 * **Format:** Currently, the code primarily supports PNG image format due to its lossless compression. Other image formats might introduce compression artifacts that could corrupt the hidden data.
 
-## Future Improvements
-
-* Implement more robust encryption algorithms.
-* Support more image formats.
-* Add error handling for invalid input (e.g., incorrect file paths, unsupported image formats).
-* Provide a graphical user interface (GUI) for easier interaction.
-
 ## Author
 
 Aperezvigoa
