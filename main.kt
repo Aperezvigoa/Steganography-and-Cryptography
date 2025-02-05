@@ -1,224 +1,196 @@
 package cryptography
-import java.io.File 
+import java.io.File
+import javax.imageio.ImageIO
 import java.awt.image.BufferedImage
 import java.awt.Color
-import javax.imageio.ImageIO
+import javax.imageio.IIOException
 
+class TextProcessor {
 
-class ImageProcessor {
-    private fun loadImage(path: String): BufferedImage? {
-        val userPath = File(path)
-        try {
-            val loadedImage: BufferedImage = ImageIO.read(userPath)
-            return loadedImage
-        } catch (e: Exception) {
-            //println("Something goes wrong. ${e.message}")
-            return null
+    fun setPath(input: String) = File(input)
+
+    fun getByteArr(input: String) = input.encodeToByteArray()
+
+    fun getBinary(input: ByteArray): List<Int> {
+        val binCharMessage = input.joinToString("") { it.toString(2).padStart(8, '0') }.toMutableList()
+        val binIntMessage: MutableList<Int> = mutableListOf()
+        for (b in binCharMessage) {
+            binIntMessage.add(b.toString().toInt())
         }
+        return binIntMessage.toList()
     }
 
-    private fun saveImage(image: BufferedImage, path: File) {
-        try {
-            ImageIO.write(image, "png", path)
-            //println("Exported successfully in $path")
-        } catch (e: Exception) {
-            println("Unexpected error ocurred.")
+    fun xorMessage(message: List<Int>, passwordBin: List<Int>): List<Int> {
+        var pIterator = 0
+        var encodedMessage: MutableList<Int> = mutableListOf()
+
+        for(b in message.indices) {
+            if (pIterator == passwordBin.size)
+                pIterator = 0
+            encodedMessage.add(message[b] xor passwordBin[pIterator])
+            pIterator++
         }
+        encodedMessage = writeStopKey(encodedMessage)
+        return encodedMessage
     }
 
-    // Stage 2
-    private fun addBit(image: BufferedImage): BufferedImage {
-        for (x in 0 until image.width) {
-            for (y in 0 until image.height) {
-                val color = Color(image.getRGB(x, y))
-                val red = color.red or 1
-                val green = color.green or 1
-                val blue = color.blue or 1
-
-                image.setRGB(x, y, Color(red, green, blue).rgb)
-            }
-        }
-        return image
+    private fun writeStopKey(input: MutableList<Int>): MutableList<Int> {
+        val zeroValues: List<Int> = listOf(0,0,0,0,0,0,0,0)
+        val threeValue: List<Int> = listOf(0,0,0,0,0,1,1,1)
+        return input.plus(zeroValues).plus(zeroValues).plus(threeValue).toMutableList()
     }
 
-    // Stage 3
-
-    private fun addBitInBlue(image: BufferedImage, message: List<Int>): BufferedImage {
-        var mIterator: Int = 0
-
-        for (y in 0 until image.height) {
-            for (x in 0 until image.width) {
-                if (mIterator == message.size)
-                    break
-
-                val color = Color(image.getRGB(x, y))
-                val red = color.red
-                val green = color.green
-                var blue = color.blue
-
-                if (message[mIterator] == 0)
-                    blue = color.blue and 254
-                else
-                    blue = color.blue or 1
-
-                mIterator++
-                image.setRGB(x, y, Color(red, green, blue).rgb)
-            }
-            if (mIterator == message.size)
-                break
-        }
-        return image
-    }
-
-    private fun encodeMessage(message: String) = message.encodeToByteArray()
-
-    private fun addingFinalKey(message: ByteArray): ByteArray {
-        val finalMessage = message.copyOf().plus(0).plus(0).plus(3)
-        return finalMessage
-    }
-
-    private fun checkSize(image: BufferedImage, message: ByteArray): Boolean {
-        val messageBitLength = message.size * 8
-        val availableSize = image.height * image.width
-        return messageBitLength <= availableSize
-    }
-
-    private fun byteToBinaryString(message: ByteArray): String {
-        val binaryString: String = message.joinToString("") { it.toString(2).padStart(8, '0') }
-        return binaryString
-    }
-
-    private fun generateBinaryList(message: ByteArray): List<Int> {
-        val binaryString = byteToBinaryString(message)
-        val binaryList: MutableList<Int> = mutableListOf()
-
-        for (b in binaryString) {
-            binaryList.add(b.toString().toInt())
-        }
-        return binaryList
-    }
-
-    // Temporal and for testing reasons
-    fun exportPixelsRGB(image:BufferedImage, exportPath: File) {
-        for (y in 0 until image.height) {
-            for (x in 0 until image.width) {
-                val color = Color(image.getRGB(x, y))
-
-                val red = color.red
-                val green = color.green
-                val blue = color.blue
-
-                exportPath.appendText("RED: ${red.toString(2)} || GREEN: ${green.toString(2)} || BLUE: ${blue.toString(2)}\n")
-                //exportPath.appendText("Blue ${blue.toString(2)}\n")
-            }
-        }
-    }
-
-    fun hide() {
-        // Request input image path
-        println("input image file:")
-        val inputLine = readln()
-        val inputImage = loadImage(inputLine)
-
-        // Request output image path
-        println("Output image file:")
-        val outputLine = readln()
-
-        // Checking input image path
-        if (inputImage == null) {
-            println("Can't read input file!")
-            return
-        } //Hyperskill steganography program.
-
-        // Request message to encrypt
-        println("Message to hide:")
-        val message = encodeMessage(readln())
-        val codedMessage = addingFinalKey(message)
-
-        // The message is bigger than the image?
-        if (!checkSize(inputImage, codedMessage)) {
-            println("The input image is not large enough to hold this message.")
-            return
-        }
-
-        // Write the message in the image
-        val binaryMessage = generateBinaryList(codedMessage)
-        val encryptedImg = addBitInBlue(inputImage, binaryMessage)
-
-        saveImage(encryptedImg, File(outputLine))
-        println("Message saved in $outputLine image.")
-    }
-
-    private fun readImageBlueBits(image: BufferedImage): String {
-        val readedBits = StringBuilder()
-        for (y in 0 until image.height) {
-            for (x in 0 until image.width) {
-                val color = Color(image.getRGB(x, y))
-                val blue = color.blue and 1
-                readedBits.append(blue)
-            }
-        }
-        return readedBits.toString()
-    }
-
-    private fun splitBinCode(readedBits: String, chunkSize: Int): MutableList<String> {
-        val chunkedBits: MutableList<String> = mutableListOf()
-        for (i in 0 until readedBits.length step chunkSize) {
-            chunkedBits.add(readedBits.substring(i, (i + chunkSize).coerceAtMost(readedBits.length)))
-        }
-        return chunkedBits
-    }
-
-    private fun binToByte(chunkedBits: MutableList<String>): MutableList<UByte> {
-        val byteMessage: MutableList<UByte> = mutableListOf()
-        for (i in 0 until chunkedBits.size) {
-            byteMessage.add(chunkedBits[i].toInt(2).toUByte())
-        }
-        return byteMessage
-    }
-
-    private fun findMessage(byteMessage: MutableList<UByte>): MutableList<UByte> {
-        val sequenceToFind: List<UByte> = mutableListOf(0U, 0U, 3U)
-        val cutPoint = byteMessage.windowed(sequenceToFind.size).indexOf(sequenceToFind)
-        val message: MutableList<UByte> = mutableListOf()
+    fun findMessageBin(imageBin: MutableList<Int>): MutableList<Int> {
+        val sequenceToFind: List<Int> = mutableListOf(0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1)
+        val cutPoint = imageBin.windowed(sequenceToFind.size).indexOf(sequenceToFind)
+        val message: MutableList<Int> = mutableListOf()
         for (i in 0 until cutPoint) {
-            message.add(byteMessage[i])
+            message.add(imageBin[i])
         }
         return message
     }
 
-    private fun printMessage(byteMessage: MutableList<UByte>) {
-        val decodedMessage = String(byteMessage.toUByteArray().toByteArray(), Charsets.UTF_8)
-        println(decodedMessage)
+    fun bintoText(binario: List<Int>): String {
+        val message = binario.subList(0, binario.size - 24)
+        val bytes = message.chunked(8) { it.joinToString("").toInt(2).toByte() }
+        return String(bytes.toByteArray(), Charsets.UTF_8)
+    }
+}
+
+class ImageProcessor(inputPath: File, passwordBin: List<Int>) {
+
+    val textProcessor = TextProcessor()
+    val inputPath = inputPath
+    val passwordBin = passwordBin
+    var outputPath = File("C:\\Users\\NAME\\Desktop\\")
+    var messageBin = listOf(0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 1, 1, 1, 0, 1, 0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 0) // Kotlin in binary :P
+        set(value) {
+            if (value.isEmpty())
+                throw IllegalArgumentException("Message cant be blank")
+            field = value
+        }
+
+    constructor(inputPath: File, outputPath: File, messageBin: List<Int>, passwordBin: List<Int>): this(inputPath, passwordBin) {
+        this.outputPath = outputPath
+        this.messageBin = messageBin
+    }
+
+    fun checkSize(message: List<Int>, image: BufferedImage): Boolean {
+        if((message.size * 8) <= (image.height * image.width))
+            return true
+        return false
+    }
+
+    fun readImage(path: File): BufferedImage? {
+        try {
+            val inputImage: BufferedImage = ImageIO.read(path)
+            return inputImage
+        } catch (e: IIOException) {
+            println("Path not found!")
+            return null
+        } catch (e: Exception) {
+            println("Unexpected error!")
+            return null
+        }
+    }
+
+    fun writeImage(image: BufferedImage, encodedMessage: List<Int>): BufferedImage {
+        var bIterator = 0
+        for (y in 0 until image.height) {
+            for (x in 0 until image.width) {
+                if (bIterator == encodedMessage.size)
+                    break
+
+                val color = Color(image.getRGB(x, y))
+                var blue = color.blue
+                blue = (blue and 0b11111110) or encodedMessage[bIterator]
+
+                bIterator++
+                image.setRGB(x, y, Color(color.red, color.green, blue).rgb)
+            }
+            if (bIterator == encodedMessage.size)
+                break
+        }
+        return image
+    }
+
+    fun readImageBin(image: BufferedImage): MutableList<Int> {
+        val imageBits: MutableList<Int> = mutableListOf()
+        for (y in 0 until image.height) {
+            for (x in 0 until image.width) {
+                val color = Color(image.getRGB(x,y))
+                val blue = color.blue
+                imageBits.add(blue.toString(2).last().toString().toInt())
+            }
+        }
+        return imageBits
+    }
+}
+
+class Options {
+    val textProcessor = TextProcessor()
+
+    fun hide() {
+        println("Input image file:")
+        val inputPath = textProcessor.setPath(readln())
+        println("Output image file:")
+        val outputPath = textProcessor.setPath(readln())
+        println("Message to hide:")
+        val messageBytes = textProcessor.getByteArr(readln())
+        println("Password:")
+        val passwordBytes = textProcessor.getByteArr(readln())
+
+        val messageBin = textProcessor.getBinary(messageBytes)
+        val passwordBin = textProcessor.getBinary(passwordBytes)
+
+        val encodedMessage = textProcessor.xorMessage(messageBin, passwordBin)
+
+        val imageProcessor = ImageProcessor(inputPath, outputPath, encodedMessage, passwordBin)
+        val inputImage = imageProcessor.readImage(inputPath) ?: return
+
+        if (!imageProcessor.checkSize(encodedMessage, inputImage))
+            return
+
+        val encodedImage = imageProcessor.writeImage(inputImage, encodedMessage)
+        ImageIO.write(encodedImage, "png", outputPath)
+        println("Message saved in $outputPath image.")
     }
 
     fun show() {
-        println("input image file:")
-        val inputLine = readln()
-        val inputImage = loadImage(inputLine)
-        val imageBlueBits = readImageBlueBits(inputImage!!)
-        val cleanedImgBlueBits = splitBinCode(imageBlueBits, 8)
-        val byteImgBlueBits = binToByte(cleanedImgBlueBits)
-        val message = findMessage(byteImgBlueBits)
+        println("Input image file:")
+        val inputPath = textProcessor.setPath(readln())
+        println("Password:")
+        val password = textProcessor.getByteArr(readln())
+        val passwordBin = textProcessor.getBinary(password)
+
+        val imageProcessor = ImageProcessor(inputPath, passwordBin)
+        val image = imageProcessor.readImage(inputPath) ?: return
+        val imageBits = imageProcessor.readImageBin(image)
+        val encodedMessageBin = textProcessor.findMessageBin(imageBits)
+        val messageBin = textProcessor.xorMessage(encodedMessageBin, passwordBin)
         println("Message:")
-        printMessage(message)
+        println(textProcessor.bintoText(messageBin))
+    }
+}
+
+class Menu {
+    val option = Options()
+    fun run() {
+        do {
+            println("Task (hide, show, exit):")
+            val userChoice = readln()
+            when (userChoice) {
+                "hide" -> option.hide()
+                "show" -> option.show()
+                "exit" -> break
+                else -> println("Wrong task: [$userChoice]")
+            }
+        } while(true)
+        println("Bye!")
     }
 }
 
 fun main() {
-
-    val processor = ImageProcessor()
-    do {
-        println("Task (hide, show, exit):")
-        val userChoice = readln()
-        when (userChoice) {
-            "exit" -> {
-                println("Bye!")
-                break
-            }
-            "hide" -> processor.hide()
-            "show" -> processor.show()
-            else -> println("Wrong task: [$userChoice]")
-        }
-    } while (true)
+    val menu = Menu()
+    menu.run()
 }
